@@ -12,7 +12,7 @@ developers := List(
   Developer(id="fiatjaf", name="fiatjaf", email="fiatjaf@gmail.com", url=url("https://fiatjaf.com/"))
 )
 publishMavenStyle := true
-publishTo := Some(Opts.resolver.sonatypeStaging)
+publishTo := sonatypePublishToBundle.value
 sonatypeCredentialHost := "s01.oss.sonatype.org"
 
 libraryDependencies += "com.lihaoyi" %%% "utest" % "0.7.11" % Test

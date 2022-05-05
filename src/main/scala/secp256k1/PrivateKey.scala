@@ -43,26 +43,26 @@ case class PrivateKey(privateKey: Array[UByte]) {
     }
   }
 
-  def sign(sighash: Array[UByte]): Either[String, Array[UByte]] = {
+  def sign(message: Array[UByte]): Either[String, Array[UByte]] = {
     Zone { implicit z =>
       {
-        if (sighash.size != 32)
+        if (message.size != 32)
           return Left(
-            s"sighash must be ${SIGHASH_SIZE.toInt} bytes, not ${sighash.size}"
+            s"message must be ${SIGHASH_SIZE.toInt} bytes, not ${message.size}"
           )
 
         // load private key into C form
         val seckey = alloc[UByte](SECKEY_SIZE).asInstanceOf[SecKey]
         for (i <- 0 until privateKey.size) !(seckey + i) = privateKey(i)
 
-        // get sighash in C format
-        val sighashc = alloc[UByte](SIGHASH_SIZE).asInstanceOf[SigHash]
-        for (i <- 0 until sighash.size) !(sighashc + i) = sighash(i)
+        // get message in C format
+        val messagec = alloc[UByte](SIGHASH_SIZE).asInstanceOf[SigHash]
+        for (i <- 0 until message.size) !(messagec + i) = message(i)
 
         // make signature
         val sig = alloc[UByte](SIGNATURE_SIZE).asInstanceOf[Signature]
         val ok1 =
-          secp256k1_ecdsa_sign(ctx, sig, sighashc, seckey, null, null)
+          secp256k1_ecdsa_sign(ctx, sig, messagec, seckey, null, null)
         if (ok1 == 0) return Left("failed to sign")
 
         // serialize signature
@@ -79,6 +79,6 @@ case class PrivateKey(privateKey: Array[UByte]) {
     }
   }
 
-  def sign(sighashhex: String): Either[String, Array[UByte]] =
-    sign(hex2bytearray(sighashhex))
+  def sign(messagehex: String): Either[String, Array[UByte]] =
+    sign(hex2bytearray(messagehex))
 }

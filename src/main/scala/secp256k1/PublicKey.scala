@@ -12,14 +12,14 @@ case class PublicKey(publicKey: Array[UByte]) {
   def toHex: String = bytearray2hex(publicKey)
 
   def verify(
-      sighash: Array[UByte],
+      message: Array[UByte],
       signature: Array[UByte]
   ): Either[String, Boolean] = {
-    if (sighash.size != SIGHASH_SIZE.toInt)
-      return Left(s"sighash must be $SIGHASH_SIZE bytes, not ${sighash.size}")
+    if (message.size != SIGHASH_SIZE.toInt)
+      return Left(s"message must be $SIGHASH_SIZE bytes, not ${message.size}")
     if (signature.size != SIGNATURE_COMPACT_SERIALIZED_SIZE.toInt)
       return Left(
-        s"sighash must be $SIGNATURE_COMPACT_SERIALIZED_SIZE, not ${signature.size}"
+        s"message must be $SIGNATURE_COMPACT_SERIALIZED_SIZE, not ${signature.size}"
       )
 
     Zone { implicit z =>
@@ -29,9 +29,9 @@ case class PublicKey(publicKey: Array[UByte]) {
           alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[SerializedPubKey]
         for (i <- 0 until publicKey.size) !(spubkey + i) = publicKey(i)
 
-        val csighash =
+        val cmessage =
           alloc[UByte](SIGHASH_SIZE).asInstanceOf[SigHash]
-        for (i <- 0 until sighash.size) !(csighash + i) = sighash(i)
+        for (i <- 0 until message.size) !(cmessage + i) = message(i)
 
         val ssig =
           alloc[UByte](SIGNATURE_COMPACT_SERIALIZED_SIZE).asInstanceOf[SecKey]
@@ -56,24 +56,24 @@ case class PublicKey(publicKey: Array[UByte]) {
           return Left(s"failed to parse signature ${bytearray2hex(signature)}")
 
         // check validity
-        val valid = secp256k1_ecdsa_verify(ctx, sig, csighash, pubkey)
+        val valid = secp256k1_ecdsa_verify(ctx, sig, cmessage, pubkey)
         return Right(valid == 1)
       }
     }
   }
   def verify(
-      sighashhex: String,
+      messagehex: String,
       signaturehex: String
   ): Either[String, Boolean] =
-    verify(hex2bytearray(sighashhex), hex2bytearray(signaturehex))
+    verify(hex2bytearray(messagehex), hex2bytearray(signaturehex))
   def verify(
-      sighashhex: String,
+      messagehex: String,
       signature: Array[UByte]
   ): Either[String, Boolean] =
-    verify(hex2bytearray(sighashhex), signature)
+    verify(hex2bytearray(messagehex), signature)
   def verify(
-      sighash: Array[UByte],
+      message: Array[UByte],
       signaturehex: String
   ): Either[String, Boolean] =
-    verify(sighash, hex2bytearray(signaturehex))
+    verify(message, hex2bytearray(signaturehex))
 }

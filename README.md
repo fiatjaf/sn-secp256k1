@@ -61,4 +61,4 @@ Keys.createPrivateKey() match {
 }
 ```
 
-Read the [Scaladoc](https://fiatjaf.github.io/sn-secp256k1/secp256k1.html) to learn more.
+Read the [Scaladoc](https://www.javadoc.io/doc/com.fiatjaf/sn-secp256k1_native0.4_3/latest/secp256k1.html) to learn more.

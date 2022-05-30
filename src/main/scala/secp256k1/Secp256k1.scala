@@ -6,6 +6,13 @@ import scala.scalanative.unsafe._
 import scala.scalanative.unsigned._
 
 object Secp256k1 {
+  lazy val G = Keys
+    .loadPublicKey(
+      "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+    )
+    .toOption
+    .get
+
   import secp256k1.Secp256k1Aux._
   import secp256k1.Secp256k1Extern._
   import secp256k1.UtilsExtern._
@@ -49,6 +56,7 @@ object Secp256k1Aux {
   type SigHash = Ptr[UByte] // 32 bytes
   type Signature = Ptr[UByte] // 64 bytes
   type SignatureCompactSerialized = Ptr[UByte] // 64 bytes
+  type Tweak32 = Ptr[UByte] // 32 bytes
 
   private val FLAGS_TYPE_CONTEXT = (1 << 0).toUInt
   private val FLAGS_BIT_CONTEXT_VERIFY = (1 << 8).toUInt
@@ -67,6 +75,7 @@ object Secp256k1Aux {
   val SERIALIZED_PUBKEY_SIZE = 33L.toULong
   val SIGNATURE_SIZE = 64L.toULong
   val SIGNATURE_COMPACT_SERIALIZED_SIZE = 64L.toULong
+  val TWEAK_SIZE = 32L.toULong
 }
 
 @extern
@@ -79,14 +88,19 @@ object UtilsExtern {
 object Secp256k1Extern {
   import Secp256k1Aux._
 
+  // context
   def secp256k1_context_create(flags: UInt): Context = extern
   def secp256k1_context_randomize(ctx: Context, data: Ptr[UByte]): Int = extern
+
+  // key generation
   def secp256k1_ec_seckey_verify(ctx: Context, seckey: SecKey): Int = extern
   def secp256k1_ec_pubkey_create(
       ctx: Context,
       pubkey: PubKey,
       seckey: SecKey
   ): Int = extern
+
+  // key serialization
   def secp256k1_ec_pubkey_serialize(
       ctx: Context,
       output: SerializedPubKey,
@@ -94,6 +108,14 @@ object Secp256k1Extern {
       pubkey: PubKey,
       flags: UInt
   ): Int = extern
+  def secp256k1_ec_pubkey_parse(
+      ctx: Context,
+      pubkey: PubKey,
+      input: SerializedPubKey,
+      inputlen: CSize
+  ): Int = extern
+
+  // signatures
   def secp256k1_ecdsa_sign(
       ctx: Context,
       sig: Signature,
@@ -124,16 +146,40 @@ object Secp256k1Extern {
       sig: Signature,
       serialized_signature: SignatureCompactSerialized
   ): Int = extern
-  def secp256k1_ec_pubkey_parse(
-      ctx: Context,
-      pubkey: PubKey,
-      input: SerializedPubKey,
-      inputlen: CSize
-  ): Int = extern
   def secp256k1_ecdsa_verify(
       ctx: Context,
       sig: Signature,
       sighash: SigHash,
       pubkey: PubKey
+  ): Int = extern
+
+  // curve math
+  def secp256k1_ec_seckey_negate(
+      ctx: Context,
+      seckey: SecKey
+  ): Int = extern
+  def secp256k1_ec_pubkey_negate(
+      ctx: Context,
+      pubkey: PubKey
+  ): Int = extern
+  def secp256k1_ec_seckey_tweak_add(
+      ctx: Context,
+      seckey: SecKey,
+      tweak32: Tweak32
+  ): Int = extern
+  def secp256k1_ec_pubkey_tweak_add(
+      ctx: Context,
+      pubkey: PubKey,
+      tweak32: Tweak32
+  ): Int = extern
+  def secp256k1_ec_seckey_tweak_mul(
+      ctx: Context,
+      seckey: SecKey,
+      tweak32: Tweak32
+  ): Int = extern
+  def secp256k1_ec_pubkey_tweak_mul(
+      ctx: Context,
+      pubkey: PubKey,
+      tweak32: Tweak32
   ): Int = extern
 }

@@ -8,15 +8,15 @@ import secp256k1.Secp256k1Aux._
 import secp256k1.Secp256k1Extern._
 import secp256k1.Secp256k1._
 
-case class PrivateKey(privateKey: Array[UByte]) {
-  def toHex: String = bytearray2hex(privateKey)
+case class PrivateKey(value: Array[UByte]) {
+  def toHex: String = bytearray2hex(value)
 
   def publicKey(): PublicKey = {
     Zone { implicit z =>
       {
         // load private key into C form
         val seckey = alloc[UByte](SECKEY_SIZE).asInstanceOf[SecKey]
-        for (i <- 0 until privateKey.size) !(seckey + i) = privateKey(i)
+        for (i <- 0 until value.size) !(seckey + i) = value(i)
 
         // create public key
         val pubkey = alloc[UByte](PUBKEY_SIZE).asInstanceOf[PubKey]
@@ -53,7 +53,7 @@ case class PrivateKey(privateKey: Array[UByte]) {
 
         // load private key into C form
         val seckey = alloc[UByte](SECKEY_SIZE).asInstanceOf[SecKey]
-        for (i <- 0 until privateKey.size) !(seckey + i) = privateKey(i)
+        for (i <- 0 until value.size) !(seckey + i) = value(i)
 
         // get message in C format
         val messagec = alloc[UByte](SIGHASH_SIZE).asInstanceOf[SigHash]
@@ -78,7 +78,73 @@ case class PrivateKey(privateKey: Array[UByte]) {
       }
     }
   }
-
   def sign(messagehex: String): Either[String, Array[UByte]] =
     sign(hex2bytearray(messagehex))
+
+  def multiply(tweak: Array[UByte]): PrivateKey = {
+    Zone { implicit z =>
+      {
+        // load things in C format
+        val seckey = alloc[UByte](SECKEY_SIZE).asInstanceOf[SecKey]
+        for (i <- 0 until value.size) !(seckey + i) = value(i)
+
+        val ctweak =
+          alloc[UByte](TWEAK_SIZE).asInstanceOf[Tweak32]
+        for (i <- 0 until tweak.size) !(ctweak + i) = tweak(i)
+
+        // actually perform multiplication (in-place)
+        secp256k1_ec_seckey_tweak_mul(ctx, seckey, ctweak)
+
+        // serialize tweaked private key
+        val sskey = ptr2bytearray(seckey, SECKEY_SIZE.toInt)
+
+        // return the key object
+        PrivateKey(sskey)
+      }
+    }
+  }
+  def multiply(tweak: String): PrivateKey = multiply(hex2bytearray(tweak))
+
+  def add(tweak: Array[UByte]): PrivateKey = {
+    Zone { implicit z =>
+      {
+        // load things in C format
+        val seckey = alloc[UByte](SECKEY_SIZE).asInstanceOf[SecKey]
+        for (i <- 0 until value.size) !(seckey + i) = value(i)
+
+        val ctweak =
+          alloc[UByte](TWEAK_SIZE).asInstanceOf[Tweak32]
+        for (i <- 0 until tweak.size) !(ctweak + i) = tweak(i)
+
+        // actually perform addition (in-place)
+        secp256k1_ec_seckey_tweak_add(ctx, seckey, ctweak)
+
+        // serialize tweaked private key
+        val sskey = ptr2bytearray(seckey, SECKEY_SIZE.toInt)
+
+        // return the key object
+        PrivateKey(sskey)
+      }
+    }
+  }
+  def add(tweak: String): PrivateKey = add(hex2bytearray(tweak))
+
+  def negate(): PrivateKey = {
+    Zone { implicit z =>
+      {
+        // load things in C format
+        val seckey = alloc[UByte](SECKEY_SIZE).asInstanceOf[SecKey]
+        for (i <- 0 until value.size) !(seckey + i) = value(i)
+
+        // actually perform negateition (in-place)
+        secp256k1_ec_seckey_negate(ctx, seckey)
+
+        // serialize negated private key
+        val sskey = ptr2bytearray(seckey, SECKEY_SIZE.toInt)
+
+        // return the key object
+        PrivateKey(sskey)
+      }
+    }
+  }
 }

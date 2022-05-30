@@ -28,10 +28,10 @@ object Secp256k1Test extends TestSuite {
       val sk3 = Keys.createPrivateKey()
       val sk4 = Keys.createPrivateKey()
 
-      sk1.privateKey.size ==> 32
-      sk2.privateKey.size ==> 32
-      sk3.privateKey.size ==> 32
-      sk4.privateKey.size ==> 32
+      sk1.value.size ==> 32
+      sk2.value.size ==> 32
+      sk3.value.size ==> 32
+      sk4.value.size ==> 32
 
       assert(
         sk1.toHex != sk2.toHex,
@@ -48,10 +48,10 @@ object Secp256k1Test extends TestSuite {
         val pk3 = sk3.publicKey()
         val pk4 = sk4.publicKey()
 
-        pk1.publicKey.size ==> 33
-        pk2.publicKey.size ==> 33
-        pk3.publicKey.size ==> 33
-        pk4.publicKey.size ==> 33
+        pk1.value.size ==> 33
+        pk2.value.size ==> 33
+        pk3.value.size ==> 33
+        pk4.value.size ==> 33
 
         assert(
           pk1.toHex != pk2.toHex,

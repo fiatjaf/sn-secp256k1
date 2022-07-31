@@ -1,5 +1,6 @@
 package secp256k1
 
+import java.math.BigInteger
 import scala.scalanative.libc.stdlib
 import scala.scalanative.libc.string
 import scala.scalanative.unsafe._
@@ -12,6 +13,16 @@ object Secp256k1 {
     )
     .toOption
     .get
+
+  val N = new BigInteger(
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141",
+    16
+  )
+
+  val B = new BigInteger(
+    "0000000000000000000000000000000000000000000000000000000000000007",
+    16
+  )
 
   import secp256k1.Secp256k1Aux._
   import secp256k1.Secp256k1Extern._

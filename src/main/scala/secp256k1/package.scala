@@ -1,5 +1,3 @@
-package secp256k1
-
 import scala.scalanative.unsafe._
 import scala.scalanative.unsigned._
 
@@ -8,7 +6,7 @@ import secp256k1.Secp256k1Aux._
 import secp256k1.Secp256k1Extern._
 import secp256k1.Secp256k1._
 
-object Keys {
+package object secp256k1 {
   def createPrivateKey(): PrivateKey = Zone { implicit z =>
     // create private key
     val seckey = alloc[UByte](SECKEY_SIZE).asInstanceOf[SecKey]
@@ -55,7 +53,7 @@ object Keys {
       // check size
       if (bytes.size != SERIALIZED_PUBKEY_SIZE.toInt)
         return Left(
-          s"invalid hex string size, must be ${SERIALIZED_PUBKEY_SIZE.toInt} bytes, not ${bytes.size}"
+          s"invalid pubkey size, must be ${SERIALIZED_PUBKEY_SIZE.toInt} bytes, not ${bytes.size}"
         )
 
       // load into C form
@@ -80,4 +78,73 @@ object Keys {
 
   def loadPublicKey(hex: String): Either[String, PublicKey] =
     loadPublicKey(hex2bytearray(hex))
+
+  def recoverPublicKey(
+      message: Array[UByte],
+      signature: Array[UByte],
+      recoveryId: Int
+  ): Either[String, PublicKey] = {
+    // check sizes
+    if (message.size != SIGHASH_SIZE.toInt)
+      return Left(
+        s"invalid message hash size, must be ${SIGHASH_SIZE.toInt} bytes, not ${message.size}"
+      )
+
+    if (signature.size != SIGNATURE_COMPACT_SERIALIZED_SIZE.toInt)
+      return Left(
+        s"invalid signature size, must be ${SIGNATURE_COMPACT_SERIALIZED_SIZE.toInt} bytes, not ${signature.size}"
+      )
+
+    Zone { implicit z =>
+      // load into C form
+      val cmessage =
+        alloc[UByte](SIGHASH_SIZE).asInstanceOf[SigHash]
+      for (i <- 0 until message.size) !(cmessage + i) = message(i)
+
+      val ssig =
+        alloc[UByte](SIGNATURE_COMPACT_SERIALIZED_SIZE).asInstanceOf[SecKey]
+      for (i <- 0 until signature.size) !(ssig + i) = signature(i)
+
+      // actually perform the recovery
+      val recoverablesignature = alloc[UByte](SIGNATURE_RECOVERABLE_SIZE)
+      if (
+        secp256k1_ecdsa_recoverable_signature_parse_compact(
+          ctx,
+          recoverablesignature,
+          ssig,
+          recoveryId
+        ) == 0
+      ) Left("failed to parse recoverable signature")
+      else {
+        val pubkey = alloc[UByte](PUBKEY_SIZE)
+        if (
+          secp256k1_ecdsa_recover(
+            ctx,
+            pubkey,
+            recoverablesignature,
+            cmessage
+          ) == 0
+        ) Left("failed to recover public key from signature")
+        else {
+          // serialize into public key
+          val spubkey =
+            alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[SerializedPubKey]
+
+          val sizeptr = alloc[CSize](1)
+          !sizeptr = SERIALIZED_PUBKEY_SIZE
+
+          secp256k1_ec_pubkey_serialize(
+            ctx,
+            spubkey,
+            sizeptr,
+            pubkey,
+            EC_COMPRESSED
+          )
+
+          val spkey = ptr2bytearray(spubkey, SERIALIZED_PUBKEY_SIZE.toInt)
+          Right(PublicKey(spkey))
+        }
+      }
+    }
+  }
 }

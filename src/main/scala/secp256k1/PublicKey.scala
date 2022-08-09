@@ -115,6 +115,61 @@ case class PublicKey(value: Array[UByte]) {
   }
   def multiply(tweak: String): PublicKey = multiply(hex2bytearray(tweak))
 
+  def add(pubkey: PublicKey): PublicKey = Zone { implicit z =>
+    // load things in C format
+    val spubkey1 =
+      alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[SerializedPubKey]
+    for (i <- 0 until value.size) !(spubkey1 + i) = value(i)
+
+    val spubkey2 =
+      alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[SerializedPubKey]
+    for (i <- 0 until value.size) !(spubkey2 + i) = value(i)
+
+    // parse pubkeys
+    val pubkey1 =
+      alloc[UByte](PUBKEY_SIZE).asInstanceOf[PubKey]
+    secp256k1_ec_pubkey_parse(
+      ctx,
+      pubkey1,
+      spubkey1,
+      SERIALIZED_PUBKEY_SIZE
+    )
+
+    val pubkey2 =
+      alloc[UByte](PUBKEY_SIZE).asInstanceOf[PubKey]
+    secp256k1_ec_pubkey_parse(
+      ctx,
+      pubkey2,
+      spubkey2,
+      SERIALIZED_PUBKEY_SIZE
+    )
+
+    // build the array of pointers to the two keys
+    val arr = alloc[PubKey](2)
+    !(arr + 0) = pubkey1
+    !(arr + 1) = pubkey2
+
+    // do the combination
+    val result = alloc[UByte](PUBKEY_SIZE).asInstanceOf[PubKey]
+    secp256k1_ec_pubkey_combine(ctx, result, arr, 2.toULong)
+
+    // serialize resulting public key
+    val sizeptr = alloc[CSize](1)
+    !sizeptr = SERIALIZED_PUBKEY_SIZE
+
+    val sresult = alloc[UByte](PUBKEY_SIZE)
+    secp256k1_ec_pubkey_serialize(
+      ctx,
+      sresult,
+      sizeptr,
+      result,
+      EC_COMPRESSED
+    )
+
+    val spkey = ptr2bytearray(sresult, SERIALIZED_PUBKEY_SIZE.toInt)
+    PublicKey(spkey)
+  }
+
   def add(tweak: Array[UByte]): PublicKey = Zone { implicit z =>
     // load things in C format
     val spubkey =
@@ -188,5 +243,36 @@ case class PublicKey(value: Array[UByte]) {
 
     val spkey = ptr2bytearray(spubkey, SERIALIZED_PUBKEY_SIZE.toInt)
     PublicKey(spkey)
+  }
+
+  def toUncompressed(): Array[UByte] = Zone { implicit z =>
+    // load in C format
+    val spubkey =
+      alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[SerializedPubKey]
+    for (i <- 0 until value.size) !(spubkey + i) = value(i)
+
+    // parse pubkey
+    val pubkey =
+      alloc[UByte](PUBKEY_SIZE).asInstanceOf[PubKey]
+    secp256k1_ec_pubkey_parse(
+      ctx,
+      pubkey,
+      spubkey,
+      SERIALIZED_PUBKEY_SIZE
+    )
+
+    // serialize public key as uncompressed
+    val sizeptr = alloc[CSize](1)
+    !sizeptr = SERIALIZED_UNCOMPRESSED_PUBKEY_SIZE
+
+    secp256k1_ec_pubkey_serialize(
+      ctx,
+      spubkey,
+      sizeptr,
+      pubkey,
+      EC_UNCOMPRESSED
+    )
+
+    ptr2bytearray(spubkey, SERIALIZED_UNCOMPRESSED_PUBKEY_SIZE.toInt)
   }
 }

@@ -1,7 +1,6 @@
 import scala.scalanative.unsigned._
 import utest._
 
-import secp256k1.Keys
 import secp256k1.Secp256k1._
 
 object Secp256k1Test extends TestSuite {
@@ -9,7 +8,7 @@ object Secp256k1Test extends TestSuite {
     test("loading pubkey") {
       val pkstring =
         "02c16cca44562b590dd279c942200bdccfd4f990c3a69fad620c10ef2f8228eaff"
-      val pk = Keys.loadPublicKey(pkstring)
+      val pk = secp256k1.loadPublicKey(pkstring)
       assert(pk.isRight)
       pk.toOption.get.toHex ==> pkstring
     }
@@ -17,16 +16,16 @@ object Secp256k1Test extends TestSuite {
     test("loading private key") {
       val skstring =
         "c16cca44562b590dd279c942200bdccfd4f990c3a69fad620c10ef2f8228eaff"
-      val sk = Keys.loadPrivateKey(skstring)
+      val sk = secp256k1.loadPrivateKey(skstring)
       assert(sk.isRight)
       sk.toOption.get.toHex ==> skstring
     }
 
     test("creating private keys") {
-      val sk1 = Keys.createPrivateKey()
-      val sk2 = Keys.createPrivateKey()
-      val sk3 = Keys.createPrivateKey()
-      val sk4 = Keys.createPrivateKey()
+      val sk1 = secp256k1.createPrivateKey()
+      val sk2 = secp256k1.createPrivateKey()
+      val sk3 = secp256k1.createPrivateKey()
+      val sk4 = secp256k1.createPrivateKey()
 
       sk1.value.size ==> 32
       sk2.value.size ==> 32

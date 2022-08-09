@@ -7,7 +7,7 @@ Installation
 ------------
 
 ```sbt
-libraryDependencies += "com.fiatjaf" %%% "sn-secp256k1" % "0.1.0"
+libraryDependencies += "com.fiatjaf" %%% "sn-secp256k1" % "0.3.0"
 ```
 
 Usage
@@ -16,10 +16,8 @@ Usage
 Here's an example that's is way too nested but shows most of the functionality:
 
 ```scala
-import secp256k1.Keys
-
 // generate a random private key
-Keys.createPrivateKey() match {
+secp256k1.createPrivateKey() match {
   case Left(err) => println(err)
   case Right(sk) => {
     println(s"generated a secret key: ${sk.toHex}")
@@ -42,7 +40,7 @@ Keys.createPrivateKey() match {
             println("signed!")
 
             // now load the public key from a hex string (or Array[UByte])
-            Keys.loadPublicKey(pkhex) match {
+            secp256k1.loadPublicKey(pkhex) match {
               case Left(err) => println(err)
               case Right(thesamepublickey) => {
                 // and use it to verify the signature

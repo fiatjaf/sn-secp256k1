@@ -7,7 +7,7 @@ import scala.scalanative.unsafe._
 import scala.scalanative.unsigned._
 
 object Secp256k1 {
-  lazy val G = Keys
+  lazy val G = secp256k1
     .loadPublicKey(
       "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
     )
@@ -66,6 +66,7 @@ object Secp256k1Aux {
   type SerializedPubKey = Ptr[UByte] // 33 bytes
   type SigHash = Ptr[UByte] // 32 bytes
   type Signature = Ptr[UByte] // 64 bytes
+  type RecoverableSignature = Ptr[UByte] // 65 bytes
   type SignatureCompactSerialized = Ptr[UByte] // 64 bytes
   type Tweak32 = Ptr[UByte] // 32 bytes
 
@@ -84,8 +85,10 @@ object Secp256k1Aux {
   val PUBKEY_SIZE = 64L.toULong
   val SIGHASH_SIZE = 32L.toULong
   val SERIALIZED_PUBKEY_SIZE = 33L.toULong
+  val SERIALIZED_UNCOMPRESSED_PUBKEY_SIZE = 65L.toULong
   val SIGNATURE_SIZE = 64L.toULong
   val SIGNATURE_COMPACT_SERIALIZED_SIZE = 64L.toULong
+  val SIGNATURE_RECOVERABLE_SIZE = 65L.toULong
   val TWEAK_SIZE = 32L.toULong
 }
 
@@ -163,6 +166,18 @@ object Secp256k1Extern {
       sighash: SigHash,
       pubkey: PubKey
   ): Int = extern
+  def secp256k1_ecdsa_recoverable_signature_parse_compact(
+      ctx: Context,
+      recoverable_sig: RecoverableSignature,
+      serialized_sig: SignatureCompactSerialized,
+      recid: Int
+  ): Int = extern
+  def secp256k1_ecdsa_recover(
+      ctx: Context,
+      pubkey: PubKey,
+      recoverable_sig: RecoverableSignature,
+      sighash: SigHash
+  ): Int = extern
 
   // curve math
   def secp256k1_ec_seckey_negate(
@@ -192,5 +207,11 @@ object Secp256k1Extern {
       ctx: Context,
       pubkey: PubKey,
       tweak32: Tweak32
+  ): Int = extern
+  def secp256k1_ec_pubkey_combine(
+      ctx: Context,
+      result: PubKey,
+      pubkeys: Ptr[PubKey],
+      npubkeys: CSize
   ): Int = extern
 }

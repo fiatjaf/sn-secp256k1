@@ -9,6 +9,11 @@ import secp256k1.Secp256k1Extern._
 import secp256k1.Secp256k1._
 
 case class PublicKey(value: Array[UByte]) {
+  require(
+    value.size == 33,
+    "PublicKey value must be in serialized 33-byte format. Use secp256k1.loadPublicKey() instead."
+  )
+
   def toHex: String = bytearray2hex(value)
 
   def verify(
@@ -245,6 +250,9 @@ case class PublicKey(value: Array[UByte]) {
     PublicKey(spkey)
   }
 
+  def toCompressed(): Array[UByte] =
+    value // keys are always stored in compressed form
+
   def toUncompressed(): Array[UByte] = Zone { implicit z =>
     // load in C format
     val spubkey =
@@ -262,17 +270,20 @@ case class PublicKey(value: Array[UByte]) {
     )
 
     // serialize public key as uncompressed
+    val supubkey = alloc[UByte](SERIALIZED_UNCOMPRESSED_PUBKEY_SIZE)
+      .asInstanceOf[SerializedUncompressedPubKey]
+
     val sizeptr = alloc[CSize](1)
     !sizeptr = SERIALIZED_UNCOMPRESSED_PUBKEY_SIZE
 
     secp256k1_ec_pubkey_serialize(
       ctx,
-      spubkey,
+      supubkey,
       sizeptr,
       pubkey,
       EC_UNCOMPRESSED
     )
 
-    ptr2bytearray(spubkey, SERIALIZED_UNCOMPRESSED_PUBKEY_SIZE.toInt)
+    ptr2bytearray(supubkey, SERIALIZED_UNCOMPRESSED_PUBKEY_SIZE.toInt)
   }
 }

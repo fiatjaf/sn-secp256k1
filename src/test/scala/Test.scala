@@ -5,12 +5,32 @@ import secp256k1.Secp256k1._
 
 object Secp256k1Test extends TestSuite {
   val tests = Tests {
-    test("loading pubkey") {
+    test("loading pubkey compressed, output uncompressed") {
       val pkstring =
-        "02c16cca44562b590dd279c942200bdccfd4f990c3a69fad620c10ef2f8228eaff"
+        "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
       val pk = secp256k1.loadPublicKey(pkstring)
       assert(pk.isRight)
-      pk.toOption.get.toHex ==> pkstring
+      pk.toOption.get.toHex ==> "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+
+      bytearray2hex(
+        pk.toOption.get
+          .toUncompressed()
+      ) ==> "0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8"
+    }
+
+    test("loading pubkey uncompressed, output compressed") {
+      val pkstring =
+        "0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8"
+      val pk = secp256k1.loadPublicKey(pkstring)
+      assert(pk.isRight)
+
+      // it is stored in compressed form
+      pk.toOption.get.toHex ==> "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+
+      bytearray2hex(
+        pk.toOption.get
+          .toCompressed()
+      ) ==> "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
     }
 
     test("loading private key") {

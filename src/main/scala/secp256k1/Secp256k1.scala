@@ -64,6 +64,7 @@ object Secp256k1Aux {
   type SecKey = Ptr[UByte] // 32 bytes
   type PubKey = Ptr[UByte] // 64 bytes
   type SerializedPubKey = Ptr[UByte] // 33 bytes
+  type SerializedUncompressedPubKey = Ptr[UByte] // 65 bytes
   type SigHash = Ptr[UByte] // 32 bytes
   type Signature = Ptr[UByte] // 64 bytes
   type RecoverableSignature = Ptr[UByte] // 65 bytes

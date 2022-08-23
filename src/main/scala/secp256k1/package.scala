@@ -51,14 +51,17 @@ package object secp256k1 {
   def loadPublicKey(bytes: Array[UByte]): Either[String, PublicKey] =
     Zone { implicit z =>
       // check size
-      if (bytes.size != SERIALIZED_PUBKEY_SIZE.toInt)
+      if (
+        bytes.size != SERIALIZED_PUBKEY_SIZE.toInt &&
+        bytes.size != SERIALIZED_UNCOMPRESSED_PUBKEY_SIZE.toInt
+      )
         return Left(
-          s"invalid pubkey size, must be ${SERIALIZED_PUBKEY_SIZE.toInt} bytes, not ${bytes.size}"
+          s"invalid pubkey size, must be ${SERIALIZED_PUBKEY_SIZE.toInt} or ${SERIALIZED_UNCOMPRESSED_PUBKEY_SIZE.toInt} bytes, not ${bytes.size}"
         )
 
       // load into C form
       val spubkey =
-        alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[SecKey]
+        alloc[UByte](bytes.size.toULong).asInstanceOf[SecKey]
       for (i <- 0 until bytes.size) !(spubkey + i) = bytes(i)
 
       // parse serialized pubkey
@@ -68,12 +71,27 @@ package object secp256k1 {
           ctx,
           pubkey,
           spubkey,
-          SERIALIZED_PUBKEY_SIZE
+          bytes.size.toULong
         )
       if (ok == 0) return Left("failed to parse serialized pubkey")
 
+      // serialize public key as compressed
+      val scpubkey =
+        alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[SerializedPubKey]
+
+      val sizeptr = alloc[CSize](1)
+      !sizeptr = SERIALIZED_PUBKEY_SIZE
+
+      secp256k1_ec_pubkey_serialize(
+        ctx,
+        scpubkey,
+        sizeptr,
+        pubkey,
+        EC_COMPRESSED
+      )
+
       // return the key object
-      Right(PublicKey(bytes))
+      Right(PublicKey(ptr2bytearray(scpubkey, SERIALIZED_PUBKEY_SIZE.toInt)))
     }
 
   def loadPublicKey(hex: String): Either[String, PublicKey] =

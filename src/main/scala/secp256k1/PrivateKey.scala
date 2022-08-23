@@ -20,7 +20,7 @@ case class PrivateKey(value: Array[UByte]) {
     val pubkey = alloc[UByte](PUBKEY_SIZE).asInstanceOf[PubKey]
     secp256k1_ec_pubkey_create(ctx, pubkey, seckey)
 
-    // serialize public key
+    // serialize public key as compressed
     val spubkey =
       alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[SerializedPubKey]
 

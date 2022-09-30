@@ -1,12 +1,13 @@
 import scala.scalanative.unsafe._
 import scala.scalanative.unsigned._
 
-import secp256k1.UtilsExtern._
-import secp256k1.Secp256k1Aux._
-import secp256k1.Secp256k1Extern._
 import secp256k1.Secp256k1._
 
 package object secp256k1 {
+  import secp256k1.UtilsExtern._
+  import secp256k1.Secp256k1Aux._
+  import secp256k1.Secp256k1Extern._
+
   def createPrivateKey(): PrivateKey = Zone { implicit z =>
     // create private key
     val seckey = alloc[UByte](SECKEY_SIZE).asInstanceOf[SecKey]
@@ -77,7 +78,7 @@ package object secp256k1 {
 
       // serialize public key as compressed
       val scpubkey =
-        alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[SerializedPubKey]
+        alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[Ptr[UByte]]
 
       val sizeptr = alloc[CSize](1)
       !sizeptr = SERIALIZED_PUBKEY_SIZE
@@ -146,7 +147,7 @@ package object secp256k1 {
         else {
           // serialize into public key
           val spubkey =
-            alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[SerializedPubKey]
+            alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[Ptr[UByte]]
 
           val sizeptr = alloc[CSize](1)
           !sizeptr = SERIALIZED_PUBKEY_SIZE

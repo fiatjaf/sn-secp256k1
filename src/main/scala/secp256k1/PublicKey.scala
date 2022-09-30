@@ -30,7 +30,7 @@ case class PublicKey(value: Array[UByte]) {
     Zone { implicit z =>
       // load things in C format
       val spubkey =
-        alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[SerializedPubKey]
+        alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[Ptr[UByte]]
       for (i <- 0 until value.size) !(spubkey + i) = value(i)
 
       val cmessage =
@@ -83,11 +83,11 @@ case class PublicKey(value: Array[UByte]) {
   def multiply(tweak: Array[UByte]): PublicKey = Zone { implicit z =>
     // load things in C format
     val spubkey =
-      alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[SerializedPubKey]
+      alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[Ptr[UByte]]
     for (i <- 0 until value.size) !(spubkey + i) = value(i)
 
     val ctweak =
-      alloc[UByte](TWEAK_SIZE).asInstanceOf[Tweak32]
+      alloc[UByte](TWEAK_SIZE).asInstanceOf[Ptr[UByte]]
     for (i <- 0 until tweak.size) !(ctweak + i) = tweak(i)
 
     // parse pubkey
@@ -123,11 +123,11 @@ case class PublicKey(value: Array[UByte]) {
   def add(pubkey: PublicKey): PublicKey = Zone { implicit z =>
     // load things in C format
     val spubkey1 =
-      alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[SerializedPubKey]
+      alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[Ptr[UByte]]
     for (i <- 0 until value.size) !(spubkey1 + i) = value(i)
 
     val spubkey2 =
-      alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[SerializedPubKey]
+      alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[Ptr[UByte]]
     for (i <- 0 until value.size) !(spubkey2 + i) = value(i)
 
     // parse pubkeys
@@ -178,11 +178,11 @@ case class PublicKey(value: Array[UByte]) {
   def add(tweak: Array[UByte]): PublicKey = Zone { implicit z =>
     // load things in C format
     val spubkey =
-      alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[SerializedPubKey]
+      alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[Ptr[UByte]]
     for (i <- 0 until value.size) !(spubkey + i) = value(i)
 
     val ctweak =
-      alloc[UByte](TWEAK_SIZE).asInstanceOf[Tweak32]
+      alloc[UByte](TWEAK_SIZE).asInstanceOf[Ptr[UByte]]
     for (i <- 0 until tweak.size) !(ctweak + i) = tweak(i)
 
     // parse pubkey
@@ -218,7 +218,7 @@ case class PublicKey(value: Array[UByte]) {
   def negate(): PublicKey = Zone { implicit z =>
     // load things in C format
     val spubkey =
-      alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[SerializedPubKey]
+      alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[Ptr[UByte]]
     for (i <- 0 until value.size) !(spubkey + i) = value(i)
 
     // parse pubkey
@@ -256,7 +256,7 @@ case class PublicKey(value: Array[UByte]) {
   def toUncompressed(): Array[UByte] = Zone { implicit z =>
     // load in C format
     val spubkey =
-      alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[SerializedPubKey]
+      alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[Ptr[UByte]]
     for (i <- 0 until value.size) !(spubkey + i) = value(i)
 
     // parse pubkey
@@ -271,7 +271,7 @@ case class PublicKey(value: Array[UByte]) {
 
     // serialize public key as uncompressed
     val supubkey = alloc[UByte](SERIALIZED_UNCOMPRESSED_PUBKEY_SIZE)
-      .asInstanceOf[SerializedUncompressedPubKey]
+      .asInstanceOf[Ptr[UByte]]
 
     val sizeptr = alloc[CSize](1)
     !sizeptr = SERIALIZED_UNCOMPRESSED_PUBKEY_SIZE

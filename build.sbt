@@ -3,7 +3,7 @@ enablePlugins(ScalaNativePlugin)
 scalaVersion := "3.1.3"
 organization := "com.fiatjaf"
 name         := "sn-secp256k1"
-version      := "0.3.1"
+version      := "0.4.0-SNAPSHOT"
 sonatypeProfileName := "com.fiatjaf"
 homepage := Some(url("https://github.com/fiatjaf/sn-secp256k1"))
 scmInfo := Some(ScmInfo(url("https://github.com/fiatjaf/sn-secp256k1"), "git@github.com:fiatjaf/sn-secp256k1.git"))

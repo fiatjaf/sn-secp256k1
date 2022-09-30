@@ -58,18 +58,15 @@ object Secp256k1 {
     )
 }
 
-object Secp256k1Aux {
+private[secp256k1] object Secp256k1Aux {
   type Context = Ptr[UByte]
   type KeyPair = Ptr[UByte] // 96 bytes
+  type XOnlyPubKey = Ptr[UByte] // 64 bytes
   type SecKey = Ptr[UByte] // 32 bytes
   type PubKey = Ptr[UByte] // 64 bytes
-  type SerializedPubKey = Ptr[UByte] // 33 bytes
-  type SerializedUncompressedPubKey = Ptr[UByte] // 65 bytes
   type SigHash = Ptr[UByte] // 32 bytes
   type Signature = Ptr[UByte] // 64 bytes
   type RecoverableSignature = Ptr[UByte] // 65 bytes
-  type SignatureCompactSerialized = Ptr[UByte] // 64 bytes
-  type Tweak32 = Ptr[UByte] // 32 bytes
 
   private val FLAGS_TYPE_CONTEXT = (1 << 0).toUInt
   private val FLAGS_BIT_CONTEXT_VERIFY = (1 << 8).toUInt
@@ -94,13 +91,13 @@ object Secp256k1Aux {
 }
 
 @extern
-object UtilsExtern {
+private[secp256k1] object UtilsExtern {
   def fill_random(data: Ptr[UByte], size: CSize): Int = extern
 }
 
 @link("secp256k1")
 @extern
-object Secp256k1Extern {
+private[secp256k1] object Secp256k1Extern {
   import Secp256k1Aux._
 
   // context
@@ -118,7 +115,7 @@ object Secp256k1Extern {
   // key serialization
   def secp256k1_ec_pubkey_serialize(
       ctx: Context,
-      output: SerializedPubKey,
+      output: Ptr[UByte],
       outputlenbyteswritten: Ptr[CSize],
       pubkey: PubKey,
       flags: UInt
@@ -126,7 +123,7 @@ object Secp256k1Extern {
   def secp256k1_ec_pubkey_parse(
       ctx: Context,
       pubkey: PubKey,
-      input: SerializedPubKey,
+      input: Ptr[UByte],
       inputlen: CSize
   ): Int = extern
 
@@ -153,13 +150,13 @@ object Secp256k1Extern {
   ): Int = extern
   def secp256k1_ecdsa_signature_serialize_compact(
       ctx: Context,
-      serialized_signature: SignatureCompactSerialized,
+      serialized_signature: Ptr[UByte],
       sig: Signature
   ): Int = extern
   def secp256k1_ecdsa_signature_parse_compact(
       ctx: Context,
       sig: Signature,
-      serialized_signature: SignatureCompactSerialized
+      serialized_signature: Ptr[UByte]
   ): Int = extern
   def secp256k1_ecdsa_verify(
       ctx: Context,
@@ -170,7 +167,7 @@ object Secp256k1Extern {
   def secp256k1_ecdsa_recoverable_signature_parse_compact(
       ctx: Context,
       recoverable_sig: RecoverableSignature,
-      serialized_sig: SignatureCompactSerialized,
+      serialized_sig: Ptr[UByte],
       recid: Int
   ): Int = extern
   def secp256k1_ecdsa_recover(
@@ -192,22 +189,22 @@ object Secp256k1Extern {
   def secp256k1_ec_seckey_tweak_add(
       ctx: Context,
       seckey: SecKey,
-      tweak32: Tweak32
+      tweak32: Ptr[UByte]
   ): Int = extern
   def secp256k1_ec_pubkey_tweak_add(
       ctx: Context,
       pubkey: PubKey,
-      tweak32: Tweak32
+      tweak32: Ptr[UByte]
   ): Int = extern
   def secp256k1_ec_seckey_tweak_mul(
       ctx: Context,
       seckey: SecKey,
-      tweak32: Tweak32
+      tweak32: Ptr[UByte]
   ): Int = extern
   def secp256k1_ec_pubkey_tweak_mul(
       ctx: Context,
       pubkey: PubKey,
-      tweak32: Tweak32
+      tweak32: Ptr[UByte]
   ): Int = extern
   def secp256k1_ec_pubkey_combine(
       ctx: Context,

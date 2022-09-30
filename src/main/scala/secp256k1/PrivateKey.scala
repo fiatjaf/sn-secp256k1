@@ -22,7 +22,7 @@ case class PrivateKey(value: Array[UByte]) {
 
     // serialize public key as compressed
     val spubkey =
-      alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[SerializedPubKey]
+      alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[Ptr[UByte]]
 
     val sizeptr = alloc[CSize](1)
     !sizeptr = SERIALIZED_PUBKEY_SIZE
@@ -62,7 +62,7 @@ case class PrivateKey(value: Array[UByte]) {
 
       // serialize signature
       val compactsig = alloc[UByte](SIGNATURE_COMPACT_SERIALIZED_SIZE)
-        .asInstanceOf[SignatureCompactSerialized]
+        .asInstanceOf[Ptr[UByte]]
       val ok2 =
         secp256k1_ecdsa_signature_serialize_compact(ctx, compactsig, sig)
       if (ok2 == 0) return Left("failed to serialize signature")
@@ -80,7 +80,7 @@ case class PrivateKey(value: Array[UByte]) {
     for (i <- 0 until value.size) !(seckey + i) = value(i)
 
     val ctweak =
-      alloc[UByte](TWEAK_SIZE).asInstanceOf[Tweak32]
+      alloc[UByte](TWEAK_SIZE).asInstanceOf[Ptr[UByte]]
     for (i <- 0 until tweak.size) !(ctweak + i) = tweak(i)
 
     // actually perform multiplication (in-place)
@@ -100,7 +100,7 @@ case class PrivateKey(value: Array[UByte]) {
     for (i <- 0 until value.size) !(seckey + i) = value(i)
 
     val ctweak =
-      alloc[UByte](TWEAK_SIZE).asInstanceOf[Tweak32]
+      alloc[UByte](TWEAK_SIZE).asInstanceOf[Ptr[UByte]]
     for (i <- 0 until tweak.size) !(ctweak + i) = tweak(i)
 
     // actually perform addition (in-place)

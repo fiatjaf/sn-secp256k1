@@ -82,6 +82,8 @@ private[secp256k1] object Secp256k1Aux {
   val SECKEY_SIZE = 32L.toULong
   val PUBKEY_SIZE = 64L.toULong
   val SIGHASH_SIZE = 32L.toULong
+  val KEYPAIR_SIZE = 96L.toULong
+  val XONLYPUBKEY_SIZE = 64L.toULong
   val SERIALIZED_PUBKEY_SIZE = 33L.toULong
   val SERIALIZED_UNCOMPRESSED_PUBKEY_SIZE = 65L.toULong
   val SIGNATURE_SIZE = 64L.toULong
@@ -211,5 +213,31 @@ private[secp256k1] object Secp256k1Extern {
       result: PubKey,
       pubkeys: Ptr[PubKey],
       npubkeys: CSize
+  ): Int = extern
+
+  // schnorr
+  def secp256k1_keypair_create(
+      ctx: Context,
+      keypair: KeyPair,
+      seckey: Ptr[UByte]
+  ): Int = extern
+  def secp256k1_xonly_pubkey_parse(
+      ctx: Context,
+      pubkey: XOnlyPubKey,
+      input32: Ptr[UByte]
+  ): Int = extern
+  def secp256k1_schnorrsig_sign32(
+      ctx: Context,
+      sig64: Ptr[UByte],
+      msg32: Ptr[UByte],
+      keypair: KeyPair,
+      aux_rand32: Ptr[UByte]
+  ): Int = extern
+  def secp256k1_schnorrsig_verify(
+      ctx: Context,
+      sig64: Ptr[UByte],
+      msg: Ptr[UByte],
+      msglen: CSize,
+      pubkey: XOnlyPubKey
   ): Int = extern
 }

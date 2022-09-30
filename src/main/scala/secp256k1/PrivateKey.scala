@@ -74,6 +74,54 @@ case class PrivateKey(value: Array[UByte]) {
   def sign(messagehex: String): Either[String, Array[UByte]] =
     sign(hex2bytearray(messagehex))
 
+  def signSchnorr(
+      message: Array[UByte],
+      auxRand: Array[UByte] = Array.empty
+  ): Either[String, Array[UByte]] = Zone { implicit z =>
+    if (message.size != 32)
+      return Left(
+        s"message must be ${SIGHASH_SIZE.toInt} bytes, not ${message.size}"
+      )
+
+    // load private key into C form
+    val seckey = alloc[UByte](SECKEY_SIZE).asInstanceOf[SecKey]
+    for (i <- 0 until value.size) !(seckey + i) = value(i)
+
+    // get message in C format
+    val messagec = alloc[UByte](SIGHASH_SIZE).asInstanceOf[SigHash]
+    for (i <- 0 until message.size) !(messagec + i) = message(i)
+
+    // build keypair object from seckey
+    val keypair = alloc[UByte](KEYPAIR_SIZE).asInstanceOf[KeyPair]
+    val ok0 = secp256k1_keypair_create(ctx, keypair, seckey)
+    if (ok0 == 0) return Left("failed to build keypair from secret key")
+
+    // gather 32 random bytes
+    val aux_rand32 = alloc[UByte](32).asInstanceOf[Ptr[UByte]]
+    if (auxRand.size == 32) {
+      for (i <- 0 until 32) !(aux_rand32 + i) = auxRand(i)
+    } else {
+      val ok0 = fill_random(aux_rand32, 32L.toULong)
+      if (ok0 == 0) return Left("failed to gather randomness for aux_rand32")
+    }
+
+    // make signature
+    val sig = alloc[UByte](SIGNATURE_SIZE).asInstanceOf[Signature]
+    val ok1 =
+      secp256k1_schnorrsig_sign32(ctx, sig, messagec, keypair, aux_rand32)
+    if (ok1 == 0) return Left("failed to sign")
+
+    // the signature is just transparent 64 bytes, no fancy objects, so we just return it
+    Right(ptr2bytearray(sig, 64))
+  }
+  def signSchnorr(messagehex: String): Either[String, Array[UByte]] =
+    signSchnorr(hex2bytearray(messagehex))
+  def signSchnorr(
+      messagehex: String,
+      auxRand: String
+  ): Either[String, Array[UByte]] =
+    signSchnorr(hex2bytearray(messagehex), hex2bytearray(auxRand))
+
   def multiply(tweak: Array[UByte]): PrivateKey = Zone { implicit z =>
     // load things in C format
     val seckey = alloc[UByte](SECKEY_SIZE).asInstanceOf[SecKey]

@@ -15,6 +15,7 @@ case class PublicKey(value: Array[UByte]) {
   )
 
   def toHex: String = bytearray2hex(value)
+  def xonly: XOnlyPublicKey = XOnlyPublicKey(value.drop(1))
 
   def verify(
       message: Array[UByte],
@@ -38,7 +39,7 @@ case class PublicKey(value: Array[UByte]) {
       for (i <- 0 until message.size) !(cmessage + i) = message(i)
 
       val ssig =
-        alloc[UByte](SIGNATURE_COMPACT_SERIALIZED_SIZE).asInstanceOf[SecKey]
+        alloc[UByte](SIGNATURE_COMPACT_SERIALIZED_SIZE).asInstanceOf[Ptr[UByte]]
       for (i <- 0 until signature.size) !(ssig + i) = signature(i)
 
       // parse pubkey

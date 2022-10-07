@@ -50,9 +50,20 @@ package object secp256k1 {
   def loadPrivateKey(hex: String): Either[String, PrivateKey] =
     loadPrivateKey(hex2bytearray(hex))
 
-  def loadPublicKey(bytes: Array[UByte]): Either[String, PublicKey] =
+  def loadPublicKey(
+      xonlyOrSerializedOrUncompressedBytes: Array[UByte]
+  ): Either[String, PublicKey] =
     Zone { implicit z =>
-      // check size
+      val bytes = {
+        // accept xonly public keys and assume they have the 0x02 prefix
+        if (
+          xonlyOrSerializedOrUncompressedBytes.size == SERIALIZED_PUBKEY_SIZE.toInt - 1
+        )
+          2.toUByte +: xonlyOrSerializedOrUncompressedBytes
+        else xonlyOrSerializedOrUncompressedBytes
+      }
+
+      // as well as the other types
       if (
         bytes.size != SERIALIZED_PUBKEY_SIZE.toInt &&
         bytes.size != SERIALIZED_UNCOMPRESSED_PUBKEY_SIZE.toInt

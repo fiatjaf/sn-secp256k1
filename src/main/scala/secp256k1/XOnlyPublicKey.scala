@@ -36,8 +36,8 @@ case class XOnlyPublicKey(value: Array[UByte]) {
         for (i <- 0 until message.size) !(cmessage + i) = message(i)
 
         val ssig =
-          alloc[UByte](96L.toULong).asInstanceOf[Ptr[UByte]]
-        for (i <- 0 until 96) !(ssig + i) = signature(i)
+          alloc[UByte](64L.toULong).asInstanceOf[Ptr[UByte]]
+        for (i <- 0 until 64) !(ssig + i) = signature(i)
 
         // parse pubkey into xonly pubkey object
         val xonlypubkey =

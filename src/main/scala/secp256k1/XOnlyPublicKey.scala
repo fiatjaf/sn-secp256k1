@@ -21,45 +21,45 @@ case class XOnlyPublicKey(value: Array[UByte]) {
       signature: Array[UByte]
   ): Either[String, Boolean] = {
     if (message.size != SIGHASH_SIZE.toInt)
-      return Left(s"message must be $SIGHASH_SIZE bytes, not ${message.size}")
-    if (signature.size != 64)
-      return Left(s"message must be 64, not ${signature.size}")
+      Left(s"message must be $SIGHASH_SIZE bytes, not ${message.size}")
+    else if (signature.size != 64)
+      Left(s"message must be 64, not ${signature.size}")
+    else
+      Zone { implicit z =>
+        // load things in C format
+        val spubkey =
+          alloc[UByte](32L.toULong).asInstanceOf[Ptr[UByte]]
+        for (i <- 0 until 32) !(spubkey + i) = value(i)
 
-    Zone { implicit z =>
-      // load things in C format
-      val spubkey =
-        alloc[UByte](32L.toULong).asInstanceOf[Ptr[UByte]]
-      for (i <- 0 until 32) !(spubkey + i) = value(i)
+        val cmessage =
+          alloc[UByte](SIGHASH_SIZE).asInstanceOf[SigHash]
+        for (i <- 0 until message.size) !(cmessage + i) = message(i)
 
-      val cmessage =
-        alloc[UByte](SIGHASH_SIZE).asInstanceOf[SigHash]
-      for (i <- 0 until message.size) !(cmessage + i) = message(i)
+        val ssig =
+          alloc[UByte](96L.toULong).asInstanceOf[Ptr[UByte]]
+        for (i <- 0 until 96) !(ssig + i) = signature(i)
 
-      val ssig =
-        alloc[UByte](96L.toULong).asInstanceOf[Ptr[UByte]]
-      for (i <- 0 until 96) !(ssig + i) = signature(i)
-
-      // parse pubkey into xonly pubkey object
-      val xonlypubkey =
-        alloc[UByte](XONLYPUBKEY_SIZE).asInstanceOf[XOnlyPubKey]
-      val ok1 = secp256k1_xonly_pubkey_parse(
-        ctx,
-        xonlypubkey,
-        spubkey
-      )
-      if (ok1 == 0)
-        return Left(s"failed to parse pubkey '${bytearray2hex(value)}'")
-
-      // check validity
-      val valid = secp256k1_schnorrsig_verify(
-        ctx,
-        ssig,
-        cmessage,
-        32L.toULong,
-        xonlypubkey
-      )
-      return Right(valid == 1)
-    }
+        // parse pubkey into xonly pubkey object
+        val xonlypubkey =
+          alloc[UByte](XONLYPUBKEY_SIZE).asInstanceOf[XOnlyPubKey]
+        val ok1 = secp256k1_xonly_pubkey_parse(
+          ctx,
+          xonlypubkey,
+          spubkey
+        )
+        if (ok1 == 0) Left(s"failed to parse pubkey '${bytearray2hex(value)}'")
+        else {
+          // check validity
+          val valid = secp256k1_schnorrsig_verify(
+            ctx,
+            ssig,
+            cmessage,
+            32L.toULong,
+            xonlypubkey
+          )
+          Right(valid == 1)
+        }
+      }
   }
 
   def verifySchnorr(

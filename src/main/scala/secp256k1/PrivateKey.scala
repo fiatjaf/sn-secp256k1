@@ -42,34 +42,36 @@ case class PrivateKey(value: Array[UByte]) {
   def sign(message: Array[UByte]): Either[String, Array[UByte]] = Zone {
     implicit z =>
       if (message.size != 32)
-        return Left(
+        Left(
           s"message must be ${SIGHASH_SIZE.toInt} bytes, not ${message.size}"
         )
+      else {
+        // load private key into C form
+        val seckey = alloc[UByte](SECKEY_SIZE).asInstanceOf[SecKey]
+        for (i <- 0 until value.size) !(seckey + i) = value(i)
 
-      // load private key into C form
-      val seckey = alloc[UByte](SECKEY_SIZE).asInstanceOf[SecKey]
-      for (i <- 0 until value.size) !(seckey + i) = value(i)
+        // get message in C format
+        val messagec = alloc[UByte](SIGHASH_SIZE).asInstanceOf[SigHash]
+        for (i <- 0 until message.size) !(messagec + i) = message(i)
 
-      // get message in C format
-      val messagec = alloc[UByte](SIGHASH_SIZE).asInstanceOf[SigHash]
-      for (i <- 0 until message.size) !(messagec + i) = message(i)
-
-      // make signature
-      val sig = alloc[UByte](SIGNATURE_SIZE).asInstanceOf[Signature]
-      val ok1 =
-        secp256k1_ecdsa_sign(ctx, sig, messagec, seckey, null, null)
-      if (ok1 == 0) return Left("failed to sign")
-
-      // serialize signature
-      val compactsig = alloc[UByte](SIGNATURE_COMPACT_SERIALIZED_SIZE)
-        .asInstanceOf[Ptr[UByte]]
-      val ok2 =
-        secp256k1_ecdsa_signature_serialize_compact(ctx, compactsig, sig)
-      if (ok2 == 0) return Left("failed to serialize signature")
-
-      Right(
-        ptr2bytearray(compactsig, SIGNATURE_COMPACT_SERIALIZED_SIZE.toInt)
-      )
+        // make signature
+        val sig = alloc[UByte](SIGNATURE_SIZE).asInstanceOf[Signature]
+        val ok1 =
+          secp256k1_ecdsa_sign(ctx, sig, messagec, seckey, null, null)
+        if (ok1 == 0) Left("failed to sign")
+        else {
+          // serialize signature
+          val compactsig = alloc[UByte](SIGNATURE_COMPACT_SERIALIZED_SIZE)
+            .asInstanceOf[Ptr[UByte]]
+          val ok2 =
+            secp256k1_ecdsa_signature_serialize_compact(ctx, compactsig, sig)
+          if (ok2 == 0) Left("failed to serialize signature")
+          else
+            Right(
+              ptr2bytearray(compactsig, SIGNATURE_COMPACT_SERIALIZED_SIZE.toInt)
+            )
+        }
+      }
   }
   def sign(messagehex: String): Either[String, Array[UByte]] =
     sign(hex2bytearray(messagehex))
@@ -79,41 +81,59 @@ case class PrivateKey(value: Array[UByte]) {
       auxRand: Array[UByte] = Array.empty
   ): Either[String, Array[UByte]] = Zone { implicit z =>
     if (message.size != 32)
-      return Left(
+      Left(
         s"message must be ${SIGHASH_SIZE.toInt} bytes, not ${message.size}"
       )
+    else {
+      // load private key into C form
+      val seckey = alloc[UByte](SECKEY_SIZE).asInstanceOf[SecKey]
+      for (i <- 0 until value.size) !(seckey + i) = value(i)
 
-    // load private key into C form
-    val seckey = alloc[UByte](SECKEY_SIZE).asInstanceOf[SecKey]
-    for (i <- 0 until value.size) !(seckey + i) = value(i)
+      // get message in C format
+      val messagec = alloc[UByte](SIGHASH_SIZE).asInstanceOf[SigHash]
+      for (i <- 0 until message.size) !(messagec + i) = message(i)
 
-    // get message in C format
-    val messagec = alloc[UByte](SIGHASH_SIZE).asInstanceOf[SigHash]
-    for (i <- 0 until message.size) !(messagec + i) = message(i)
+      // build keypair object from seckey
+      val keypair = alloc[UByte](KEYPAIR_SIZE).asInstanceOf[KeyPair]
+      val ok0 = secp256k1_keypair_create(ctx, keypair, seckey)
+      if (ok0 == 0) Left("failed to build keypair from secret key")
+      else {
+        // gather 32 random bytes
+        val aux_rand32_opt: Option[Ptr[UByte]] = {
+          val r = alloc[UByte](32).asInstanceOf[Ptr[UByte]]
+          if (auxRand.size == 32) {
+            for (i <- 0 until 32) !(r + i) = auxRand(i)
+            Some(r)
+          } else {
+            val ok0 = fill_random(r, 32L.toULong)
+            if (ok0 == 0) None
+            else Some(r)
+          }
+        }
 
-    // build keypair object from seckey
-    val keypair = alloc[UByte](KEYPAIR_SIZE).asInstanceOf[KeyPair]
-    val ok0 = secp256k1_keypair_create(ctx, keypair, seckey)
-    if (ok0 == 0) return Left("failed to build keypair from secret key")
-
-    // gather 32 random bytes
-    val aux_rand32 = alloc[UByte](32).asInstanceOf[Ptr[UByte]]
-    if (auxRand.size == 32) {
-      for (i <- 0 until 32) !(aux_rand32 + i) = auxRand(i)
-    } else {
-      val ok0 = fill_random(aux_rand32, 32L.toULong)
-      if (ok0 == 0) return Left("failed to gather randomness for aux_rand32")
+        aux_rand32_opt match {
+          case None =>
+            Left("failed to gather randomness for aux_rand32")
+          case Some(aux_rand32) =>
+            // make signature
+            val sig = alloc[UByte](SIGNATURE_SIZE).asInstanceOf[Signature]
+            val ok1 =
+              secp256k1_schnorrsig_sign32(
+                ctx,
+                sig,
+                messagec,
+                keypair,
+                aux_rand32
+              )
+            if (ok1 == 0) Left("failed to sign")
+            else
+              // the signature is just transparent 64 bytes, no fancy objects, so we just return it
+              Right(ptr2bytearray(sig, 64))
+        }
+      }
     }
-
-    // make signature
-    val sig = alloc[UByte](SIGNATURE_SIZE).asInstanceOf[Signature]
-    val ok1 =
-      secp256k1_schnorrsig_sign32(ctx, sig, messagec, keypair, aux_rand32)
-    if (ok1 == 0) return Left("failed to sign")
-
-    // the signature is just transparent 64 bytes, no fancy objects, so we just return it
-    Right(ptr2bytearray(sig, 64))
   }
+
   def signSchnorr(messagehex: String): Either[String, Array[UByte]] =
     signSchnorr(hex2bytearray(messagehex))
   def signSchnorr(

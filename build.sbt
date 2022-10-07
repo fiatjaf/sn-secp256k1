@@ -1,5 +1,7 @@
 enablePlugins(ScalaNativePlugin)
 
+Global / onChangedBuildSource := ReloadOnSourceChanges
+
 scalaVersion := "3.2.0"
 organization := "com.fiatjaf"
 name         := "sn-secp256k1"
@@ -17,4 +19,3 @@ sonatypeCredentialHost := "s01.oss.sonatype.org"
 
 libraryDependencies += "com.lihaoyi" %%% "utest" % "0.7.11" % Test
 testFrameworks += new TestFramework("utest.runner.Framework")
-nativeLinkStubs := true

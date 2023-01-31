@@ -217,5 +217,29 @@ object Secp256k1Test extends TestSuite {
           ) ==> Some(Right(false))
       }
     }
+
+    test("ecc add pubkeys") {
+      val p1 =
+        secp256k1
+          .loadPrivateKey(
+            "45022100fd567d121db66e382991534ada77a6bd3106f0a1098c231e47993447"
+          )
+          .toOption
+          .get
+          .publicKey()
+      val p2 =
+        secp256k1
+          .loadPrivateKey(
+            "d3f72100fd567d121db66e382991534ada77a6bd3106f0a1098c231e47993555"
+          )
+          .toOption
+          .get
+          .publicKey()
+      val sum = p1.add(p2)
+
+      bytearray2hex(
+        sum.value
+      ) ==> "0303f24810aafe764cf9573789953af913aaea5b2d92f8ee9a18bba3be16159c6e"
+    }
   }
 }

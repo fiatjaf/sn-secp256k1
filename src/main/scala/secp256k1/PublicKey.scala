@@ -130,7 +130,7 @@ case class PublicKey(value: Array[UByte]) {
 
     val spubkey2 =
       alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[Ptr[UByte]]
-    for (i <- 0 until value.size) !(spubkey2 + i) = value(i)
+    for (i <- 0 until pubkey.value.size) !(spubkey2 + i) = pubkey.value(i)
 
     // parse pubkeys
     val pubkey1 =
@@ -164,7 +164,7 @@ case class PublicKey(value: Array[UByte]) {
     val sizeptr = alloc[CSize](1)
     !sizeptr = SERIALIZED_PUBKEY_SIZE
 
-    val sresult = alloc[UByte](PUBKEY_SIZE)
+    val sresult = alloc[UByte](SERIALIZED_PUBKEY_SIZE)
     secp256k1_ec_pubkey_serialize(
       ctx,
       sresult,

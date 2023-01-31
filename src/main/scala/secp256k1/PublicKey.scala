@@ -20,51 +20,52 @@ case class PublicKey(value: Array[UByte]) {
   def verify(
       message: Array[UByte],
       signature: Array[UByte]
-  ): Either[String, Boolean] = {
+  ): Either[String, Boolean] =
     if (message.size != SIGHASH_SIZE.toInt)
-      return Left(s"message must be $SIGHASH_SIZE bytes, not ${message.size}")
-    if (signature.size != SIGNATURE_COMPACT_SERIALIZED_SIZE.toInt)
-      return Left(
+      Left(s"message must be $SIGHASH_SIZE bytes, not ${message.size}")
+    else if (signature.size != SIGNATURE_COMPACT_SERIALIZED_SIZE.toInt)
+      Left(
         s"message must be $SIGNATURE_COMPACT_SERIALIZED_SIZE, not ${signature.size}"
       )
+    else
+      Zone { implicit z =>
+        // load things in C format
+        val spubkey =
+          alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[Ptr[UByte]]
+        for (i <- 0 until value.size) !(spubkey + i) = value(i)
 
-    Zone { implicit z =>
-      // load things in C format
-      val spubkey =
-        alloc[UByte](SERIALIZED_PUBKEY_SIZE).asInstanceOf[Ptr[UByte]]
-      for (i <- 0 until value.size) !(spubkey + i) = value(i)
+        val cmessage =
+          alloc[UByte](SIGHASH_SIZE).asInstanceOf[SigHash]
+        for (i <- 0 until message.size) !(cmessage + i) = message(i)
 
-      val cmessage =
-        alloc[UByte](SIGHASH_SIZE).asInstanceOf[SigHash]
-      for (i <- 0 until message.size) !(cmessage + i) = message(i)
+        val ssig =
+          alloc[UByte](SIGNATURE_COMPACT_SERIALIZED_SIZE)
+            .asInstanceOf[Ptr[UByte]]
+        for (i <- 0 until signature.size) !(ssig + i) = signature(i)
 
-      val ssig =
-        alloc[UByte](SIGNATURE_COMPACT_SERIALIZED_SIZE).asInstanceOf[Ptr[UByte]]
-      for (i <- 0 until signature.size) !(ssig + i) = signature(i)
-
-      // parse pubkey
-      val pubkey =
-        alloc[UByte](PUBKEY_SIZE).asInstanceOf[PubKey]
-      val ok1 = secp256k1_ec_pubkey_parse(
-        ctx,
-        pubkey,
-        spubkey,
-        SERIALIZED_PUBKEY_SIZE
-      )
-      if (ok1 == 0)
-        return Left(s"failed to parse pubkey '${bytearray2hex(value)}'")
-
-      // parse signature
-      val sig = alloc[UByte](SIGNATURE_SIZE).asInstanceOf[Signature]
-      val ok2 = secp256k1_ecdsa_signature_parse_compact(ctx, sig, ssig)
-      if (ok2 == 0)
-        return Left(s"failed to parse signature ${bytearray2hex(signature)}")
-
-      // check validity
-      val valid = secp256k1_ecdsa_verify(ctx, sig, cmessage, pubkey)
-      return Right(valid == 1)
-    }
-  }
+        // parse pubkey
+        val pubkey =
+          alloc[UByte](PUBKEY_SIZE).asInstanceOf[PubKey]
+        val ok1 = secp256k1_ec_pubkey_parse(
+          ctx,
+          pubkey,
+          spubkey,
+          SERIALIZED_PUBKEY_SIZE
+        )
+        if (ok1 == 0) Left(s"failed to parse pubkey '${bytearray2hex(value)}'")
+        else {
+          // parse signature
+          val sig = alloc[UByte](SIGNATURE_SIZE).asInstanceOf[Signature]
+          val ok2 = secp256k1_ecdsa_signature_parse_compact(ctx, sig, ssig)
+          if (ok2 == 0)
+            Left(s"failed to parse signature ${bytearray2hex(signature)}")
+          else {
+            // check validity
+            val valid = secp256k1_ecdsa_verify(ctx, sig, cmessage, pubkey)
+            Right(valid == 1)
+          }
+        }
+      }
   def verify(
       messagehex: String,
       signaturehex: String

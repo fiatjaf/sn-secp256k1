@@ -2,10 +2,10 @@ enablePlugins(ScalaNativePlugin)
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
-scalaVersion := "3.2.0"
+scalaVersion := "3.2.1"
 organization := "com.fiatjaf"
 name         := "sn-secp256k1"
-version      := "0.4.0"
+version      := "0.5.0-SNAPSHOT"
 sonatypeProfileName := "com.fiatjaf"
 homepage := Some(url("https://github.com/fiatjaf/sn-secp256k1"))
 scmInfo := Some(ScmInfo(url("https://github.com/fiatjaf/sn-secp256k1"), "git@github.com:fiatjaf/sn-secp256k1.git"))

@@ -158,7 +158,8 @@ case class PublicKey(value: Array[UByte]) {
 
     // do the combination
     val result = alloc[UByte](PUBKEY_SIZE).asInstanceOf[PubKey]
-    secp256k1_ec_pubkey_combine(ctx, result, arr, 2.toULong)
+    val res = secp256k1_ec_pubkey_combine(ctx, result, arr, 2.toULong)
+    require(res == 1)
 
     // serialize resulting public key
     val sizeptr = alloc[CSize](1)

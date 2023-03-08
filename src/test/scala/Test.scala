@@ -2,6 +2,7 @@ import scala.scalanative.unsigned._
 import utest._
 
 import secp256k1.Secp256k1._
+import secp256k1.Secp256k1
 
 object Secp256k1Test extends TestSuite {
   val tests = Tests {
@@ -240,6 +241,27 @@ object Secp256k1Test extends TestSuite {
       bytearray2hex(
         sum.value
       ) ==> "0303f24810aafe764cf9573789953af913aaea5b2d92f8ee9a18bba3be16159c6e"
+    }
+
+    test("add two keys that produce an invalid result") {
+      val key1 = secp256k1
+        .loadPublicKey(
+          "0340d19615accee70d1325483a748eea3f544ec7bd6aa0f7609cf8df7ecbfb23f4"
+        )
+        .toOption
+        .get
+      val key2 = secp256k1
+        .loadPublicKey(
+          "0240d19615accee70d1325483a748eea3f544ec7bd6aa0f7609cf8df7ecbfb23f4"
+        )
+        .toOption
+        .get
+
+      assert(
+        scala.util
+          .Try(key1.add(key2))
+          .isFailure
+      )
     }
   }
 }
